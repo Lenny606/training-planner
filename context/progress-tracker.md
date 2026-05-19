@@ -7,7 +7,7 @@ Tento dokument slouží jako **paměť projektu** a hlavní přehled stavu imple
 ## 📊 Celkový Stav Projektu
 
 * **Aktuální Fáze**: `Fáze 2: Databázová vrstva a lokální úložiště`
-* **Celkový progres**: ████████░░░░░░░░░░░░ **40%**
+* **Celkový progres**: █████████░░░░░░░░░░░ **45%**
 * **Poslední aktualizace**: 19. května 2026
 
 ---
@@ -60,6 +60,10 @@ Tento dokument slouží jako **paměť projektu** a hlavní přehled stavu imple
   - Vytvořena kompletní Mongoose schémata a Zod validátory se String UUID primárními klíči pro všechny modely (`User`, `Cycle`, `Mesocycle`, `Microcycle`, `Exercise`, `Workout`, `TrainingSession`) se schema-level validacemi.
   - Vytvořena Repository vrstva pro všechny modely (`UserRepository`, `CycleRepository`, `WorkoutRepository`, `TrainingSessionRepository`) s podporou pro klientsky generovaná UUID a inteligentní `save()` kontrolou.
   - Napsány a úspěšně spuštěny robustní integrační testy (`database.test.ts`) s 100% úspěšností (7/7 testů prochází).
+- [x] **Seeding a Testovací Data (Fáze 2 - Data Seeding)**:
+  - Vytvořena kompletní a realistická specifikace testovacích dat v souboru `04-data.md` pro 2 uživatele (Jirka - Fitness, Petr - Box), katalog 15 cviků, plány tréninků a cyklů.
+  - Implementován robustní, samočinný seeder skript `seed.ts` s plnou typovou a Mongoose kontrolou, klientsky generovanými UUID a automatickým promazáním stávajících dat.
+  - Přidán skript `"db:seed"` do `package.json` a úspěšně ověřena stoprocentní funkčnost seederu v WSL.
 
 ---
 
