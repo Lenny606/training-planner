@@ -56,14 +56,14 @@ export default defineConfig({
 
 ## 2. Definice Lokální Databáze v Prohlížeči (`app/db/localDb.ts`)
 
-Použijeme **Dexie.js**, což je lehký wrapper nad IndexedDB s plnou podporou TypeScriptu. Lokální databáze zrcadlí strukturu serverové MongoDB, aby byl přechod dat naprosto plynulý.
+Použijeme **Dexie.js**, což je lehký wrapper nad IndexedDB s plnou podporou TypeScriptu. Lokální databáze zrcadlí strukturu serverové MongoDB. Všechna ID jsou definována jako textové UUID klíče pro okamžité generování offline.
 
 ```typescript
 import Dexie, { type Table } from 'dexie';
 
 // Typové definice pro lokální tabulky
 export interface LocalExercise {
-  id?: string; // Lokální nebo MongoDB ID
+  id: string; // Vždy UUID string
   name: string;
   category: 'strength' | 'combat' | 'cardio' | 'mobility' | 'stretch';
   description?: string;
@@ -71,7 +71,7 @@ export interface LocalExercise {
 }
 
 export interface LocalTrainingPlan {
-  id: string; // Vždy UUID nebo MongoDB ID string
+  id: string; // Vždy UUID string shodující se s MongoDB _id
   name: string;
   description?: string;
   date: Date;
@@ -81,8 +81,8 @@ export interface LocalTrainingPlan {
 }
 
 export interface SyncQueueItem {
-  id?: number; // Auto-increment ID fronty
-  planId: string;
+  id?: number; // Auto-increment ID lokální fronty (IndexedDB index)
+  planId: string; // UUID plánu
   action: 'SAVE' | 'DELETE';
   payload: any;
   timestamp: number;
@@ -98,7 +98,7 @@ class ClientDatabase extends Dexie {
     
     // Definice indexů pro rychlé vyhledávání
     this.version(1).stores({
-      exercises: '++id, name, category',
+      exercises: 'id, name, category',
       plans: 'id, date, synced, updatedAt',
       syncQueue: '++id, planId, timestamp',
     });
@@ -112,7 +112,7 @@ export const localDb = new ClientDatabase();
 
 ## 3. Synchronizační Cyklus (Sync Engine Flow)
 
-Když uživatel upraví tréninkový plán, spustí se následující proces v našem Zustand storu na frontendu:
+Když uživatel upraví tréninkový plán v offline režimu, akce se zapíše do `syncQueue`. Jakmile se zařízení znovu připojí k síti, spustí se synchronizační cyklus, který sequentially (po pořadí) zpracuje všechny nahromaděné požadavky a následně aktualizuje stav v lokální databázi.
 
 ```typescript
 import { localDb } from '../db/localDb';
@@ -125,7 +125,7 @@ import { saveTrainingPlanFn } from '../db/functions';
 export async function syncOfflineQueue() {
   if (!navigator.onLine) return;
 
-  // 1. Načtení všech neodeslaných položek z lokální fronty
+  // 1. Načtení všech neodeslaných položek z lokální fronty seřazených chronologicky
   const queueItems = await localDb.syncQueue.orderBy('timestamp').toArray();
   if (queueItems.length === 0) return;
 
@@ -135,22 +135,24 @@ export async function syncOfflineQueue() {
     try {
       if (item.action === 'SAVE') {
         // 2. Volání typově bezpečné serverové funkce TanStack Start
+        // Server obdrží kompletní objekt plánu včetně klientského UUID v _id
         const result = await saveTrainingPlanFn({ data: item.payload });
         
         if (result.success) {
           // 3. Aktualizace lokálního plánu (označení jako synchronizovaný)
           await localDb.plans.update(item.planId, {
             synced: 1,
-            id: result.plan._id, // Uložení reálného ID z MongoDB
+            // id zůstává stejné UUID, které server přijal a uložil
           });
           
-          // 4. Odstranění z fronty
+          // 4. Odstranění položky z outbox fronty
           await localDb.syncQueue.delete(item.id!);
         }
       }
     } catch (error) {
-      console.error(`Chyba při synchronizaci položky ${item.id}:`, error);
-      // V případě výpadku sítě zastavíme cyklus, zkusíme to příště
+      console.error(`Chyba při synchronizaci outbox položky ${item.id}:`, error);
+      // V případě výpadku sítě nebo chyby spojení přerušíme cyklus.
+      // Položka zůstane ve frontě a bude zpracována při dalším pokusu.
       break;
     }
   }

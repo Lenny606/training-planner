@@ -48,23 +48,25 @@ Díky **TanStack Routeru** ukládáme vyhledávací dotaz a filtr kategorií př
 
 ---
 
-## 2. Zustand Store s Server Functions (`app/store/usePlannerStore.ts`)
+## 2. Zustand Store s Integrovanou Dexie.js a Server Functions (`app/store/usePlannerStore.ts`)
 
-Zustand spravuje lokální interaktivní stav rozpracovaného tréninku a po skončení úprav volá typově bezpečnou serverovou funkci `saveTrainingPlanFn`.
+Zustand spravuje klientský interaktivní stav. Kvůli bezpečnosti dat při offline práci **každá akce okamžitě zapíše stav do lokální IndexedDB (Dexie.js)** a zařadí změnu do odchozí outbox fronty (`syncQueue`). Následně se spustí debounced pokus o uložení na server přes serverovou funkci.
 
 ```typescript
 import { create } from 'zustand';
+import { localDb } from '../db/localDb';
 import { saveTrainingPlanFn } from '../db/functions';
 
 interface PlannerState {
   activePlan: any;
   isSaving: boolean;
   autosaveTimeout: NodeJS.Timeout | null;
-  loadPlan: (plan: any) => void;
-  addTimeBlock: (name?: string, duration?: number) => void;
-  removeTimeBlock: (blockId: string) => void;
-  addExerciseToBlock: (blockId: string, exercise: any, index?: number) => void;
-  updateExerciseMetrics: (blockId: string, assignedExerciseId: string, newMetrics: any) => void;
+  loadPlan: (plan: any) => Promise<void>;
+  updatePlanOffline: (updatedPlan: any) => Promise<void>;
+  addTimeBlock: (name?: string, duration?: number) => Promise<void>;
+  removeTimeBlock: (blockId: string) => Promise<void>;
+  addExerciseToBlock: (blockId: string, exercise: any, index?: number) => Promise<void>;
+  updateExerciseMetrics: (blockId: string, assignedExerciseId: string, newMetrics: any) => Promise<void>;
   triggerAutosave: () => void;
 }
 
@@ -73,11 +75,47 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   isSaving: false,
   autosaveTimeout: null,
 
-  // Inicializace dat z Router Loaderu
-  loadPlan: (plan) => set({ activePlan: plan }),
+  // Inicializace dat z Router Loaderu (ukládá rovnou i do lokální Dexie cache)
+  loadPlan: async (plan) => {
+    if (!plan) return;
+    set({ activePlan: plan });
+    
+    await localDb.plans.put({
+      id: plan._id,
+      ...plan,
+      synced: 1, // Označeno jako načtené/uložené na serveru
+      updatedAt: Date.now()
+    });
+  },
 
-  // Správa časových bloků
-  addTimeBlock: (name = 'Nový Blok', duration = 15) => {
+  // Centrální klientský zápis (Single Source of Truth)
+  updatePlanOffline: async (updatedPlan) => {
+    const planId = updatedPlan._id;
+    const enrichedPlan = {
+      ...updatedPlan,
+      synced: 0, // Není uloženo na serveru
+      updatedAt: Date.now()
+    };
+
+    set({ activePlan: enrichedPlan, isSaving: true });
+
+    // 1. Zápis do IndexedDB (Dexie) - Nulová latence pro uživatele
+    await localDb.plans.put(enrichedPlan);
+
+    // 2. Přidání úkonu do fronty změn (Outbox)
+    await localDb.syncQueue.put({
+      planId,
+      action: 'SAVE',
+      payload: enrichedPlan,
+      timestamp: Date.now()
+    });
+
+    // 3. Spuštění asynchronního uložení
+    get().triggerAutosave();
+  },
+
+  // Správa časových bloků (každá akce deleguje na updatePlanOffline)
+  addTimeBlock: async (name = 'Nový Blok', duration = 15) => {
     const activePlan = get().activePlan;
     if (!activePlan) return;
 
@@ -88,34 +126,33 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       exercises: []
     };
 
-    set({
-      activePlan: {
-        ...activePlan,
-        timeBlocks: [...activePlan.timeBlocks, newBlock]
-      }
-    });
-    get().triggerAutosave();
+    const updatedPlan = {
+      ...activePlan,
+      timeBlocks: [...activePlan.timeBlocks, newBlock]
+    };
+
+    await get().updatePlanOffline(updatedPlan);
   },
 
-  removeTimeBlock: (blockId) => {
+  removeTimeBlock: async (blockId) => {
     const activePlan = get().activePlan;
     if (!activePlan) return;
 
-    set({
-      activePlan: {
-        ...activePlan,
-        timeBlocks: activePlan.timeBlocks.filter((b: any) => b.id !== blockId)
-      }
-    });
-    get().triggerAutosave();
+    const updatedPlan = {
+      ...activePlan,
+      timeBlocks: activePlan.timeBlocks.filter((b: any) => b.id !== blockId)
+    };
+
+    await get().updatePlanOffline(updatedPlan);
   },
 
   // Správa cviků v časových blocích
-  addExerciseToBlock: (blockId, exercise, index) => {
+  addExerciseToBlock: async (blockId, exercise, index) => {
     const activePlan = get().activePlan;
     if (!activePlan) return;
 
     const assignedExercise = {
+      _id: crypto.randomUUID(), // Každé přiřazení získá své unikátní UUID ihned na klientovi
       exerciseId: exercise._id,
       name: exercise.name,
       category: exercise.category,
@@ -135,11 +172,11 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       return { ...block, exercises: newExercises };
     });
 
-    set({ activePlan: { ...activePlan, timeBlocks: updatedTimeBlocks } });
-    get().triggerAutosave();
+    const updatedPlan = { ...activePlan, timeBlocks: updatedTimeBlocks };
+    await get().updatePlanOffline(updatedPlan);
   },
 
-  updateExerciseMetrics: (blockId, assignedExerciseId, newMetrics) => {
+  updateExerciseMetrics: async (blockId, assignedExerciseId, newMetrics) => {
     const activePlan = get().activePlan;
     if (!activePlan) return;
 
@@ -154,14 +191,12 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       return { ...block, exercises: updatedExercises };
     });
 
-    set({ activePlan: { ...activePlan, timeBlocks: updatedTimeBlocks } });
-    get().triggerAutosave();
+    const updatedPlan = { ...activePlan, timeBlocks: updatedTimeBlocks };
+    await get().updatePlanOffline(updatedPlan);
   },
 
-  // Automatické debounced ukládání přes Server Function
+  // Pokus o uložení na server (debounced)
   triggerAutosave: () => {
-    set({ isSaving: true });
-
     if (get().autosaveTimeout) {
       clearTimeout(get().autosaveTimeout!);
     }
@@ -170,16 +205,25 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       const activePlan = get().activePlan;
       if (!activePlan) return;
 
+      // Pokud jsme offline, tiše počkáme. Dexie je již uložena, outbox je zapsán.
+      if (!navigator.onLine) {
+        set({ isSaving: false });
+        return;
+      }
+
       try {
-        // Volání typově bezpečné serverové funkce TanStack Start
         const response = await saveTrainingPlanFn({ data: activePlan });
         
         if (response.success) {
-          // Aktualizace stavu s potvrzenými daty ze serveru (např. vygenerovaná _id pro cviky)
+          // Uložení se na serveru podařilo -> označíme v Dexie jako synced: 1
+          await localDb.plans.update(activePlan._id, { synced: 1 });
+          // Smažeme úkol z fronty pro tento plán
+          await localDb.syncQueue.where('planId').equals(activePlan._id).delete();
+          
           set({ activePlan: response.plan });
         }
       } catch (error) {
-        console.error('Automatické ukládání selhalo:', error);
+        console.warn('Odeslání na server selhalo (např. krátký výpadek). Změny zůstávají bezpečně offline v IndexedDB.', error);
       } finally {
         set({ isSaving: false });
       }
@@ -194,30 +238,51 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
 
 ## 3. Integrace `@dnd-kit` a TanStack Routeru (`app/routes/index.tsx`)
 
-Zde je ukázka, jak typově bezpečný router načte výchozí data (pomocí `loaderu`) a jak propojíme DndContext se Zustand storem.
+Zde je ukázka, jak typově bezpečný router načte výchozí data (loader je upraven jako hybridní, aby nezpůsobil pád offline režimu) a jak propojíme DndContext se senzory ošetřujícími mobilní dotykové skrolování.
 
 ```tsx
 import { createFileRoute } from '@tanstack/react-router';
-import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { 
+  DndContext, 
+  DragEndEvent, 
+  useSensor, 
+  useSensors, 
+  PointerSensor, 
+  TouchSensor 
+} from '@dnd-kit/core';
 import { useEffect } from 'react';
 import { usePlannerStore } from '../store/usePlannerStore';
 import { getPlanByIdFn } from '../db/functions';
+import { localDb } from '../db/localDb';
 import ExerciseLibrary from '../components/exercise-library/ExerciseLibrary';
 import Timeline from '../components/planner/Timeline';
 
-// 1. Definice routy a typově bezpečného načtení dat (Loader)
+// 1. Definice routy s hybridním loaderem odolným proti výpadku sítě
 export const Route = createFileRoute('/')({
   validateSearch: (search: Record<string, unknown>) => {
     return {
       search: (search.search as string) || '',
       category: (search.category as string) || 'all',
-      planId: (search.planId as string) || 'default-plan-id', // Např. ID dnešního plánu
+      planId: (search.planId as string) || 'd87bc4fa-4be1-4328-89c0-6d4a2bdf044c', // UUID plánu
     };
   },
   loader: async ({ search }) => {
-    // Spustí se na serveru při SSR a stáhne data z MongoDB
-    const plan = await getPlanByIdFn({ data: search.planId });
-    return { plan };
+    // Pokud jsme na klientovi, zkusíme nejprve načíst lokální IndexedDB kopii (okamžitý start)
+    if (typeof window !== 'undefined') {
+      const localPlan = await localDb.plans.get(search.planId);
+      if (localPlan) {
+        return { plan: localPlan, isOfflineFallback: true };
+      }
+    }
+
+    try {
+      // Stažení ze serveru přes Server Function
+      const plan = await getPlanByIdFn({ data: search.planId });
+      return { plan, isOfflineFallback: false };
+    } catch (error) {
+      console.warn('Nelze se připojit k serveru pro načtení plánu. Používám offline fallback.');
+      return { plan: null, isOfflineFallback: true };
+    }
   }
 });
 
@@ -226,12 +291,29 @@ export default function PlannerPage() {
   const { search, category } = Route.useSearch();
   const { loadPlan, addExerciseToBlock, exercises } = usePlannerStore();
 
-  // 2. Synchronizace dat z loaderu do Zustand Store
+  // 2. Nastavení senzorů pro DND, které neblokují mobilní skrolování
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Uživatel musí táhnout alespoň 8px, aby nedošlo k záměně s pouhým klikem
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250, // Pro mobilní dotyk je nutné podržet prst 250ms pro zahájení přetahování
+        tolerance: 5,
+      },
+    })
+  );
+
+  // 3. Synchronizace dat z loaderu do Zustand Store
   useEffect(() => {
-    if (plan) loadPlan(plan);
+    if (plan) {
+      loadPlan(plan);
+    }
   }, [plan]);
 
-  // 3. Obsluha přetažení cviku
+  // 4. Obsluha přetažení cviku
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
@@ -245,12 +327,17 @@ export default function PlannerPage() {
       
       if (originalExercise) {
         addExerciseToBlock(targetBlockId, originalExercise);
+        
+        // Možnost přidat haptickou odezvu při úspěšném dropu cviku na mobilu
+        if ('vibrate' in navigator) {
+          navigator.vibrate(15);
+        }
       }
     }
   }
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <main className="planner-container">
         {/* Knihovna cviků čte search a category přímo z URL */}
         <ExerciseLibrary search={search} category={category} />

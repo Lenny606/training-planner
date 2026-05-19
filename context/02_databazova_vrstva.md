@@ -55,14 +55,18 @@ erDiagram
 
 Níže jsou uvedeny implementační návrhy Mongoose schémat.
 
-### A. Cvik (`app/db/Exercise.js`)
+### A. Cvik (`app/db/Exercise.ts`)
 
-Definuje základní strukturu cviku v katalogu.
+Definuje základní strukturu cviku v katalogu. Využívá `_id` typu `String` pro bezproblémovou offline-first kompatibilitu s UUID generovanými na klientské straně.
 
-```javascript
+```typescript
 import mongoose from 'mongoose';
 
 const ExerciseSchema = new mongoose.Schema({
+  _id: {
+    type: String, // Umožňuje bezpečné ukládání klientských UUID
+    required: true
+  },
   name: {
     type: String,
     required: [true, 'Název cviku je povinný.'],
@@ -97,6 +101,7 @@ const ExerciseSchema = new mongoose.Schema({
     restDuration: { type: Number, default: 60 } // v sekundách
   }
 }, {
+  _id: false, // Vypneme automatické generování ObjectId
   timestamps: true // Vytvoří createdAt a updatedAt
 });
 
@@ -104,18 +109,21 @@ const ExerciseSchema = new mongoose.Schema({
 export default mongoose.models.Exercise || mongoose.model('Exercise', ExerciseSchema);
 ```
 
-### B. Tréninkový Plán (`app/db/TrainingPlan.js`)
+### B. Tréninkový Plán (`app/db/TrainingPlan.ts`)
 
-Obsahuje kompletní strukturu plánu včetně vnořených časových bloků a přiřazených cviků.
+Obsahuje kompletní strukturu plánu včetně vnořených časových bloků a přiřazených cviků. Veškeré ID jsou typu `String` (UUID).
 
-```javascript
+```typescript
 import mongoose from 'mongoose';
 
 // Schéma pro přiřazený cvik uvnitř časového bloku
 const AssignedExerciseSchema = new mongoose.Schema({
+  _id: {
+    type: String, // UUID přiřazení generované na klientovi
+    required: true
+  },
   exerciseId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Exercise',
+    type: String, // Cizí klíč odkazující na Exercise._id (UUID)
     required: true
   },
   name: {
@@ -137,6 +145,8 @@ const AssignedExerciseSchema = new mongoose.Schema({
     roundDuration: { type: Number },
     restDuration: { type: Number }
   }
+}, {
+  _id: false // Vypneme defaultní ObjectId generátor
 });
 
 // Schéma pro časový blok (Time Block)
@@ -157,10 +167,16 @@ const TimeBlockSchema = new mongoose.Schema({
     default: 15 // Délka bloku v minutách (např. 15 minut na rozcvičku)
   },
   exercises: [AssignedExerciseSchema] // Vnořené pole přiřazených cviků
+}, {
+  _id: false // Vypneme defaultní ObjectId pro subdokumenty bloků
 });
 
 // Hlavní schéma Tréninkového plánu
 const TrainingPlanSchema = new mongoose.Schema({
+  _id: {
+    type: String, // UUID generované na klientovi offline
+    required: true
+  },
   name: {
     type: String,
     required: [true, 'Název plánu je povinný.'],
@@ -178,6 +194,7 @@ const TrainingPlanSchema = new mongoose.Schema({
   },
   timeBlocks: [TimeBlockSchema] // Vnořené pole časových bloků
 }, {
+  _id: false, // Použijeme vlastní string/UUID _id
   timestamps: true
 });
 

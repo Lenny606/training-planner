@@ -24,6 +24,7 @@ Předtím, než serverová funkce zpracuje dotaz do databáze, proběhne striktn
 import { z } from 'zod';
 
 export const ExerciseValidationSchema = z.object({
+  _id: z.string().uuid("Neplatný formát ID cviku."), // UUID vytvořené na klientovi nebo importem
   name: z.string().min(1, "Název cviku je povinný.").max(100),
   category: z.enum(['strength', 'combat', 'cardio', 'mobility', 'stretch']),
   description: z.string().optional(),
@@ -41,13 +42,14 @@ export const ExerciseValidationSchema = z.object({
 ```
 
 ### **B. Schéma pro Plán (`TrainingPlanValidationSchema`)**
-Validuje kompletní strukturu tréninku a časových bloků odesílanou z frontendu po jakékoliv interakci.
+Validuje kompletní strukturu tréninku a časových bloků odesílanou z frontendu po jakékoliv interakci. Všechny entity mají striktní textové UUID identifikátory.
 
 ```typescript
 import { z } from 'zod';
 
 const AssignedExerciseSchema = z.object({
-  exerciseId: z.string(),
+  _id: z.string().uuid("Neplatné ID přiřazeného cviku."), // UUID
+  exerciseId: z.string().uuid("Neplatné ID globálního cviku."), // UUID
   name: z.string(),
   category: z.string(),
   metrics: z.object({
@@ -62,14 +64,14 @@ const AssignedExerciseSchema = z.object({
 });
 
 const TimeBlockSchema = z.object({
-  id: z.string(), // UUID z frontendu
+  id: z.string().uuid("Neplatné ID časového bloku."), // UUID z frontendu
   name: z.string().min(1, "Název bloku je povinný."),
   duration: z.number().int().positive("Délka bloku musí být kladné číslo."),
   exercises: z.array(AssignedExerciseSchema)
 });
 
 export const TrainingPlanValidationSchema = z.object({
-  _id: z.string().optional(), // Může chybět při zakládání nového
+  _id: z.string().uuid("Neplatné ID plánu."), // U offline-first je _id vždy generováno na klientovi
   name: z.string().min(1, "Název plánu je povinný."),
   description: z.string().optional(),
   date: z.string().datetime().or(z.string().pipe(z.coerce.date())),
@@ -83,7 +85,7 @@ export const TrainingPlanValidationSchema = z.object({
 
 Upozornění: Připojení k databázi MongoDB využívá proměnnou prostředí `process.env.MONGODB_URI`. **Tento citlivý údaj nikdy neexponujeme přímo v kódu** a necháváme jej bezpečně uložený v konfiguraci hostingu nebo souboru `.env`.
 
-Níže je ukázka implementace dvou klíčových serverových funkcí pro načtení a bezpečné uložení tréninkového plánu.
+Níže je ukázka implementace dvou klíčových serverových funkcí pro načtení a bezpečné uložení tréninkového plánu. Všimněte si, že metoda uložení kontroluje **existenci** záznamu v DB podle `_id` namísto spoléhání se na absenci `_id` (protože klient posílá již vygenerované UUID).
 
 ```typescript
 import { createServerFn } from '@tanstack/start';
@@ -122,6 +124,7 @@ export const getPlanByIdFn = createServerFn({ method: 'GET' })
 /**
  * 2. Uložení / Aktualizace tréninkového plánu
  * Přijímá celý objekt plánu, provede Zod validaci a zapíše jej do MongoDB.
+ * Kontroluje existenci v databázi na základě klientského UUID.
  */
 export const saveTrainingPlanFn = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
@@ -138,8 +141,11 @@ export const saveTrainingPlanFn = createServerFn({ method: 'POST' })
     try {
       await dbConnect();
 
-      if (!planData._id) {
-        // Vytvoření nového plánu
+      // Zjistíme, zda plán již v databázi existuje (používáme klientské UUID jako _id)
+      const existingPlan = await TrainingPlan.findById(planData._id);
+
+      if (!existingPlan) {
+        // Vytvoření nového plánu s klientským UUID
         const newPlan = new TrainingPlan(planData);
         await newPlan.save();
         return { success: true, plan: JSON.parse(JSON.stringify(newPlan)) };
