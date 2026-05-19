@@ -7,7 +7,7 @@ Tento dokument slouží jako **paměť projektu** a hlavní přehled stavu imple
 ## 📊 Celkový Stav Projektu
 
 * **Aktuální Fáze**: `Fáze 2: Databázová vrstva a lokální úložiště`
-* **Celkový progres**: ██████░░░░░░░░░░░░░░ **30%**
+* **Celkový progres**: ████████░░░░░░░░░░░░ **40%**
 * **Poslední aktualizace**: 19. května 2026
 
 ---
@@ -55,6 +55,11 @@ Tento dokument slouží jako **paměť projektu** a hlavní přehled stavu imple
   - Vytvořena orchestrace `docker-compose.yml` pro Mongo 7.0 (`tp-mongodb`), Mongo Express (`tp-mongo-express`) a webovou aplikaci (`tp-web-app`).
   - Aktualizovány `.env.development` a `.env.example` o autorizované MongoDB proměnné a tajné klíče.
   - Spuštěna testovací suita pro ujištění, že konfigurace Dockeru nenarušila integritu projektu (100% pass).
+- [x] **Mongoose, Zod a Repository Layer (Fáze 2 - Backend DB)**:
+  - Implementováno robustní Singleton připojení `connection.ts` chráněné proti znovupřipojování v dev prostředí a s dynamickou detekcí URI.
+  - Vytvořena kompletní Mongoose schémata a Zod validátory se String UUID primárními klíči pro všechny modely (`User`, `Cycle`, `Mesocycle`, `Microcycle`, `Exercise`, `Workout`, `TrainingSession`) se schema-level validacemi.
+  - Vytvořena Repository vrstva pro všechny modely (`UserRepository`, `CycleRepository`, `WorkoutRepository`, `TrainingSessionRepository`) s podporou pro klientsky generovaná UUID a inteligentní `save()` kontrolou.
+  - Napsány a úspěšně spuštěny robustní integrační testy (`database.test.ts`) s 100% úspěšností (7/7 testů prochází).
 
 ---
 
@@ -64,9 +69,9 @@ Po úspěšném dokončení kostry přecházíme na zprovoznění datové vrstvy
 ### Podkroky aktuální fáze:
 1. `[ ]` Vytvoření lokální IndexedDB databáze (`localDb.ts`) pomocí **Dexie.js** na frontendu.
 2. `[ ]` Definování Dexie schémat pro plány (`plans`) a synchronizační frontu (`syncQueue` aka Outbox).
-3. `[ ]` Příprava Mongoose schémat na backendu se String UUID primárními klíči (`_id`).
-4. `[ ]` Vytvoření Zod schemas pro validaci příchozích dat s přísným UUID formátem.
-5. `[ ]` Implementace a spuštění integračních testů ověřujících CRUD operace nad lokální Dexie a Mongoose.
+3. `[x]` Příprava Mongoose schémat na backendu se String UUID primárními klíči (`_id`) a Zod schémat pro validaci.
+4. `[x]` Implementace Repository vrstvy (UserRepository, CycleRepository, WorkoutRepository, TrainingSessionRepository).
+5. `[x]` Vytvoření a úspěšné spuštění integračních testů (`database.test.ts`) pro backend DB.
 
 ---
 

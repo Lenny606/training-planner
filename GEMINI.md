@@ -23,7 +23,7 @@ Adresář `context/` obsahuje kompletní podklady a specifikace systému. Zde je
 - **[05_offline_rezim.md](file:///home/tomas/my-projects/training-planner/context/05_offline_rezim.md)**: Dexie.js (IndexedDB) schéma, outbox synchronizační queue a nastavení Serwist PWA Service Workera.
 
 ### 3. Specifikace Funkcionalit (Feat Specs)
-- **[02-docker.md](file:///home/tomas/my-projects/training-planner/context/feat-spec/02-docker.md)**: Konfigurace lokálního vývojového prostředí v Dockeru (Multi-stage Dockerfile, Docker Compose s MongoDB a Mongo Express, volume persistence a síťování).
+- **[03-database-setup-schemas.md](file:///home/tomas/my-projects/training-planner/context/feat-spec/03-database-setup-schemas.md)**: Připojení k databázi MongoDB/Mongoose (Singleton), adresářová struktura, Repository vrstva a podrobná UUID schémata pro User, Cycle, Mesocycle, Microcycle, Workout, Exercise a TrainingSession.
 
 ---
 
