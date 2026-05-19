@@ -1,0 +1,45 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build outputs
+.output/
+.vinxi/
+dist/
+dist-ssr/
+build/
+.cache/
+.nitro/
+.tanstack/
+.wrangler/
+__unconfig*
+todos.json
+
+# Environment variables (CRITICAL)
+.env
+.env.local
+.env.development
+.env.development.local
+.env.production
+.env.production.local
+.env.test.local
+*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE and Editor configs
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Local database locks / logs
+*.log
+.pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*

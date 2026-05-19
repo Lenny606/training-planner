@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #0a0c10;
+  --color-bg-secondary: #12161f;
+  --color-bg-tertiary: #1b202c;
+  
+  --color-accent: #00f2fe;
+  --color-accent-blue: #4facfe;
+  
+  --color-strength: #ff5e62;
+  --color-combat: #ff9f43;
+  --color-cardio: #1dd1a1;
+  --color-mobility: #a55eea;
+  --color-stretch: #45aaf2;
+  
+  --color-text-main: #f3f6f9;
+  --color-text-muted: #8292a6;
+  
+  --animate-pulse-glow: pulseGlow 1.5s infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.05);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+  }
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(18, 22, 31, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel-accent {
+  background: rgba(18, 22, 31, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 242, 254, 0.15);
+}
+
+/* Základní reset a globální styly */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-main);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+}
