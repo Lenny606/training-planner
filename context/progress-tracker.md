@@ -64,11 +64,9 @@ Tento dokument slouží jako **paměť projektu** a hlavní přehled stavu imple
   - Vytvořena kompletní a realistická specifikace testovacích dat v souboru `04-data.md` pro 2 uživatele (Jirka - Fitness, Petr - Box), katalog 15 cviků, plány tréninků a cyklů.
   - Implementován robustní, samočinný seeder skript `seed.ts` s plnou typovou a Mongoose kontrolou, klientsky generovanými UUID a automatickým promazáním stávajících dat.
   - Přidán skript `"db:seed"` do `package.json` a úspěšně ověřena stoprocentní funkčnost seederu v WSL.
-- [x] **Doplnění bezpečnostních pravidel do architektury**:
-  - Do **[Přehledu Architektury (01)](file:///home/tomas/my-projects/training-planner/context/01_prehled_architektury.md)** přidána sekce o bezpečnosti dodavatelského řetězce.
-  - Zavedeno pravidlo minimálního stáří 3 dnů pro instalaci a aktualizaci NPM balíčků.
-- [x] **Vytvoření Specifikace Bezpečnosti**:
-  - Vytvořen soubor **[05-basic-security.md](file:///home/tomas/my-projects/training-planner/context/feat-spec/05-basic-security.md)** s detailním plánem pro NPM age verification, CSP a CORS.
+- [x] **Specifikace Základního Frontend UI a Testovací Homepage**:
+  - Rozepsán soubor `05-base-frontend-ui.md` popisující jednoduchý testovací dashboard.
+  - Specifikovány ovládací prvky databáze (Seed, Wipe, Dexie reset, Sync trigger), rychlé přepínání uživatelů (Trenér vs. Atlet) a diagnostický offline sync panel.
 
 ---
 

@@ -1,0 +1,594 @@
+import { createServerFn } from '@tanstack/react-start';
+import { connectToDatabase } from './db/connection';
+
+// Modely
+import User from './db/models/User';
+import Exercise from './db/models/Exercise';
+import Cycle from './db/models/Cycle';
+import Mesocycle from './db/models/Mesocycle';
+import Microcycle from './db/models/Microcycle';
+import Workout from './db/models/Workout';
+import TrainingSession from './db/models/TrainingSession';
+
+// Repozitáře
+import { UserRepository } from './db/repositories/UserRepository';
+import { ExerciseRepository } from './db/repositories/ExerciseRepository';
+import { WorkoutRepository } from './db/repositories/WorkoutRepository';
+import { CycleRepository } from './db/repositories/CycleRepository';
+import { TrainingSessionRepository } from './db/repositories/TrainingSessionRepository';
+
+// UUID konstanty z seederu
+const COACH_ID = 'c2069e2c-381c-43df-8121-66385f09623e';
+const ATHLETE_ID = 'a318b76c-38fa-4e78-98e3-466d11ff3e43';
+
+const EXERCISE_IDS = {
+  benchPress: 'e1069e2c-381c-43df-8121-66385f09623e',
+  backSquat: 'e2069e2c-381c-43df-8121-66385f09623e',
+  romanianDeadlift: 'e3069e2c-381c-43df-8121-66385f09623e',
+  pullUps: 'e4069e2c-381c-43df-8121-66385f09623e',
+  overheadPress: 'e5069e2c-381c-43df-8121-66385f09623e',
+  bicepCurl: 'e6069e2c-381c-43df-8121-66385f09623e',
+  rowing: 'e7069e2c-381c-43df-8121-66385f09623e',
+  worldsGreatestStretch: 'e8069e2c-381c-43df-8121-66385f09623e',
+  shadowBoxing: 'eb069e2c-381c-43df-8121-66385f09623e',
+  heavyBagWork: 'eb169e2c-381c-43df-8121-66385f09623e',
+  mitWork: 'eb269e2c-381c-43df-8121-66385f09623e',
+  sparring: 'eb369e2c-381c-43df-8121-66385f09623e',
+  jumpRope: 'eb469e2c-381c-43df-8121-66385f09623e',
+  burpees: 'eb569e2c-381c-43df-8121-66385f09623e',
+  shoulderDislocates: 'eb669e2c-381c-43df-8121-66385f09623e'
+};
+
+const WORKOUT_IDS = {
+  fitnessUpper: 'w1069e2c-381c-43df-8121-66385f09623e',
+  boxingConditioning: 'wb069e2c-381c-43df-8121-66385f09623e'
+};
+
+const CYCLES = {
+  fitness: {
+    cycle: 'f17cf91a-be12-4217-bc22-cf8bb95b28da',
+    meso: 'f27cf91a-be12-4217-bc22-cf8bb95b28da',
+    micro: 'f37cf91a-be12-4217-bc22-cf8bb95b28da'
+  },
+  boxing: {
+    cycle: 'b17cf91a-be12-4217-bc22-cf8bb95b28da',
+    meso: 'b27cf91a-be12-4217-bc22-cf8bb95b28da',
+    micro: 'b37cf91a-be12-4217-bc22-cf8bb95b28da'
+  }
+};
+
+const SESSION_IDS = {
+  fitnessSession: 's1069e2c-381c-43df-8121-66385f09623e'
+};
+
+/**
+ * 1. SEED DATABASE
+ */
+export const seedDatabaseFn = createServerFn({ method: 'POST' })
+  .handler(async () => {
+    await connectToDatabase();
+
+    // Vyčištění existujících dat
+    await Promise.all([
+      User.deleteMany({}),
+      Exercise.deleteMany({}),
+      Cycle.deleteMany({}),
+      Mesocycle.deleteMany({}),
+      Microcycle.deleteMany({}),
+      Workout.deleteMany({}),
+      TrainingSession.deleteMany({})
+    ]);
+
+    // Uživatelé
+    const users = [
+      {
+        _id: COACH_ID,
+        email: 'coach.tomas@trainingplanner.cz',
+        name: 'Tomas Coach',
+        role: 'coach'
+      },
+      {
+        _id: ATHLETE_ID,
+        email: 'athlete.jan@trainingplanner.cz',
+        name: 'Jan Athlete',
+        role: 'athlete'
+      }
+    ];
+    await User.insertMany(users);
+
+    // Cviky
+    const exercises = [
+      {
+        _id: EXERCISE_IDS.benchPress,
+        name: 'Bench Press',
+        category: 'strength',
+        description: 'Klasický tlak s obouruční činkou na rovné lavici pro rozvoj prsních svalů.',
+        videoUrl: '',
+        defaultMetrics: { sets: 4, reps: 8, weight: 80, duration: 0, rounds: 1, roundDuration: 180, restDuration: 120 }
+      },
+      {
+        _id: EXERCISE_IDS.backSquat,
+        name: 'Back Squat',
+        category: 'strength',
+        description: 'Hluboký dřep s velkou činkou na zádech pro sílu dolních končetin.',
+        videoUrl: '',
+        defaultMetrics: { sets: 4, reps: 6, weight: 100, duration: 0, rounds: 1, roundDuration: 180, restDuration: 150 }
+      },
+      {
+        _id: EXERCISE_IDS.romanianDeadlift,
+        name: 'Romanian Deadlift',
+        category: 'strength',
+        description: 'Mrtvý tah s mírně pokrčenými koleny zaměřený na hamstringy a hýždě.',
+        videoUrl: '',
+        defaultMetrics: { sets: 3, reps: 10, weight: 70, duration: 0, rounds: 1, roundDuration: 180, restDuration: 90 }
+      },
+      {
+        _id: EXERCISE_IDS.pullUps,
+        name: 'Pull-ups',
+        category: 'strength',
+        description: 'Shyby na hrazdě s plným rozsahem pohybu pro rozvoj zádových svalů.',
+        videoUrl: '',
+        defaultMetrics: { sets: 3, reps: 8, weight: 0, duration: 0, rounds: 1, roundDuration: 180, restDuration: 90 }
+      },
+      {
+        _id: EXERCISE_IDS.overheadPress,
+        name: 'Overhead Press',
+        category: 'strength',
+        description: 'Tlak s velkou činkou nad hlavu ve stoji pro sílu ramen a středu těla.',
+        videoUrl: '',
+        defaultMetrics: { sets: 3, reps: 8, weight: 40, duration: 0, rounds: 1, roundDuration: 180, restDuration: 120 }
+      },
+      {
+        _id: EXERCISE_IDS.bicepCurl,
+        name: 'Dumbbell Bicep Curl',
+        category: 'strength',
+        description: 'Střídavý bicepsový zdvih s jednoručkami vestoje.',
+        videoUrl: '',
+        defaultMetrics: { sets: 3, reps: 12, weight: 12, duration: 0, rounds: 1, roundDuration: 180, restDuration: 60 }
+      },
+      {
+        _id: EXERCISE_IDS.rowing,
+        name: 'Rowing Machine',
+        category: 'cardio',
+        description: 'Kondiční veslování na trenažéru se střední intenzitou.',
+        videoUrl: '',
+        defaultMetrics: { sets: 1, reps: 0, weight: 0, duration: 1200, rounds: 1, roundDuration: 1200, restDuration: 0 }
+      },
+      {
+        _id: EXERCISE_IDS.worldsGreatestStretch,
+        name: "World's Greatest Stretch",
+        category: 'mobility',
+        description: 'Komplexní dynamický strečink pro mobilizaci kyčlí, páteře a ramen.',
+        videoUrl: '',
+        defaultMetrics: { sets: 2, reps: 6, weight: 0, duration: 0, rounds: 1, roundDuration: 180, restDuration: 30 }
+      },
+      {
+        _id: EXERCISE_IDS.shadowBoxing,
+        name: 'Shadow Boxing',
+        category: 'combat',
+        description: 'Vizualizační box před zrcadlem se zaměřením na uvolněnost a techniku úderů.',
+        videoUrl: '',
+        defaultMetrics: { sets: 1, reps: 0, weight: 0, duration: 0, rounds: 3, roundDuration: 180, restDuration: 60 }
+      },
+      {
+        _id: EXERCISE_IDS.heavyBagWork,
+        name: 'Heavy Bag Work',
+        category: 'combat',
+        description: 'Intenzivní nácvik kombinací a síly úderů na těžkém pytli.',
+        videoUrl: '',
+        defaultMetrics: { sets: 1, reps: 0, weight: 0, duration: 0, rounds: 4, roundDuration: 180, restDuration: 60 }
+      },
+      {
+        _id: EXERCISE_IDS.mitWork,
+        name: 'Mit Work',
+        category: 'combat',
+        description: 'Přesné kombinace, reakční rychlost a obranné prvky na lapách s trenérem.',
+        videoUrl: '',
+        defaultMetrics: { sets: 1, reps: 0, weight: 0, duration: 0, rounds: 3, roundDuration: 180, restDuration: 60 }
+      },
+      {
+        _id: EXERCISE_IDS.sparring,
+        name: 'Technical Sparring',
+        category: 'combat',
+        description: 'Kontrolovaný cvičný zápas se zaměřením na taktiku a postřeh (50% síla).',
+        videoUrl: '',
+        defaultMetrics: { sets: 1, reps: 0, weight: 0, duration: 0, rounds: 4, roundDuration: 180, restDuration: 60 }
+      },
+      {
+        _id: EXERCISE_IDS.jumpRope,
+        name: 'Jump Rope',
+        category: 'cardio',
+        description: 'Rychlé skákání přes švihadlo pro rozvoj koordinace a lýtkové vytrvalosti.',
+        videoUrl: '',
+        defaultMetrics: { sets: 1, reps: 0, weight: 0, duration: 0, rounds: 3, roundDuration: 180, restDuration: 30 }
+      },
+      {
+        _id: EXERCISE_IDS.burpees,
+        name: 'Burpees',
+        category: 'cardio',
+        description: 'Komplexní plyometrický cvik pro rozvoj explozivní síly celého těla.',
+        videoUrl: '',
+        defaultMetrics: { sets: 3, reps: 15, weight: 0, duration: 0, rounds: 1, roundDuration: 180, restDuration: 45 }
+      },
+      {
+        _id: EXERCISE_IDS.shoulderDislocates,
+        name: 'Shoulder Band Dislocates',
+        category: 'mobility',
+        description: 'Kroužení rameny s odporovou gumou pro rozsah a zdraví ramenního kloubu.',
+        videoUrl: '',
+        defaultMetrics: { sets: 2, reps: 15, weight: 0, duration: 0, rounds: 1, roundDuration: 180, restDuration: 30 }
+      }
+    ];
+    await Exercise.insertMany(exercises);
+
+    // Cykly
+    const fitnessCycle = new Cycle({
+      _id: CYCLES.fitness.cycle,
+      userId: ATHLETE_ID,
+      name: 'Silový rozvoj & Hypertrofie 2026',
+      description: '12-týdenní makrocyklus zaměřený na rozvoj maximální síly a hypertrofie svalstva.',
+      startDate: new Date('2026-05-01'),
+      endDate: new Date('2026-07-24'),
+      status: 'active'
+    });
+    await fitnessCycle.save();
+
+    const fitnessMeso = new Mesocycle({
+      _id: CYCLES.fitness.meso,
+      cycleId: CYCLES.fitness.cycle,
+      name: 'Objemová a silová akumulace (Blok 1)',
+      description: 'Úvodní 4-týdenní blok s vyšším objemem práce pro stimulaci hypertrofie a adaptaci šlach.',
+      startDate: new Date('2026-05-01'),
+      endDate: new Date('2026-05-28'),
+      focus: 'strength'
+    });
+    await fitnessMeso.save();
+
+    const fitnessMicro = new Microcycle({
+      _id: CYCLES.fitness.micro,
+      mesocycleId: CYCLES.fitness.meso,
+      name: 'Akumulační týden 1',
+      description: 'Stabilizační týden se 70-75% maximální intenzity pro nastavení základních vah.',
+      order: 1,
+      startDate: new Date('2026-05-01'),
+      endDate: new Date('2026-05-07')
+    });
+    await fitnessMicro.save();
+
+    // Boxerský cyklus
+    const boxingCycle = new Cycle({
+      _id: CYCLES.boxing.cycle,
+      userId: ATHLETE_ID,
+      name: 'Příprava na Amatérský šampionát',
+      description: 'Specifický 8-týdenní kondiční a technický makrocyklus pro vrcholnou zápasovou formu.',
+      startDate: new Date('2026-05-18'),
+      endDate: new Date('2026-07-12'),
+      status: 'active'
+    });
+    await boxingCycle.save();
+
+    const boxingMeso = new Mesocycle({
+      _id: CYCLES.boxing.meso,
+      cycleId: CYCLES.boxing.cycle,
+      name: 'Specifická vytrvalost a lapování (Blok 1)',
+      description: 'Rozvoj specifické kardiovaskulární vytrvalosti a reakční rychlosti.',
+      startDate: new Date('2026-05-18'),
+      endDate: new Date('2026-06-14'),
+      focus: 'endurance'
+    });
+    await boxingMeso.save();
+
+    const boxingMicro = new Microcycle({
+      _id: CYCLES.boxing.micro,
+      mesocycleId: CYCLES.boxing.meso,
+      name: 'Objemový specifický týden 1',
+      description: 'První mikrocyklus zaměřený na základy pohybu a vysokou hustotu tréninkového zatížení.',
+      order: 1,
+      startDate: new Date('2026-05-18'),
+      endDate: new Date('2026-05-24')
+    });
+    await boxingMicro.save();
+
+    // Šablony
+    const workouts = [
+      {
+        _id: WORKOUT_IDS.fitnessUpper,
+        userId: ATHLETE_ID,
+        name: 'Fitness Upper Body (Tlak & Tah)',
+        description: 'Komplexní trénink horní poloviny těla zaměřený na tlakové a tahové svalové řetězce.',
+        targetDuration: 75,
+        exercises: [
+          {
+            id: 'ae1069e2-381c-43df-8121-66385f09623e',
+            exerciseId: EXERCISE_IDS.worldsGreatestStretch,
+            name: "World's Greatest Stretch",
+            category: 'mobility',
+            metrics: { sets: 2, reps: 6, restDuration: 30 }
+          },
+          {
+            id: 'ae1069e2-381c-43df-8121-66385f09623f',
+            exerciseId: EXERCISE_IDS.benchPress,
+            name: 'Bench Press',
+            category: 'strength',
+            metrics: { sets: 4, reps: 8, weight: 80, restDuration: 120 }
+          },
+          {
+            id: 'ae1069e2-381c-43df-8121-66385f096240',
+            exerciseId: EXERCISE_IDS.pullUps,
+            name: 'Pull-ups',
+            category: 'strength',
+            metrics: { sets: 3, reps: 8, weight: 0, restDuration: 90 }
+          },
+          {
+            id: 'ae1069e2-381c-43df-8121-66385f096241',
+            exerciseId: EXERCISE_IDS.overheadPress,
+            name: 'Overhead Press',
+            category: 'strength',
+            metrics: { sets: 3, reps: 8, weight: 40, restDuration: 120 }
+          },
+          {
+            id: 'ae1069e2-381c-43df-8121-66385f096242',
+            exerciseId: EXERCISE_IDS.bicepCurl,
+            name: 'Dumbbell Bicep Curl',
+            category: 'strength',
+            metrics: { sets: 3, reps: 12, weight: 12, restDuration: 60 }
+          }
+        ]
+      },
+      {
+        _id: WORKOUT_IDS.boxingConditioning,
+        userId: ATHLETE_ID,
+        name: 'Boxing Cardio Conditioning (Kondice)',
+        description: 'Intenzivní kruhový trénink pro rozvoj vytrvalosti ramen, nohou a explozivní síly.',
+        targetDuration: 60,
+        exercises: [
+          {
+            id: 'be1069e2-381c-43df-8121-66385f09623e',
+            exerciseId: EXERCISE_IDS.shoulderDislocates,
+            name: 'Shoulder Band Dislocates',
+            category: 'mobility',
+            metrics: { sets: 2, reps: 15, restDuration: 30 }
+          },
+          {
+            id: 'be1069e2-381c-43df-8121-66385f09623f',
+            exerciseId: EXERCISE_IDS.jumpRope,
+            name: 'Jump Rope',
+            category: 'cardio',
+            metrics: { rounds: 3, roundDuration: 180, restDuration: 30 }
+          },
+          {
+            id: 'be1069e2-381c-43df-8121-66385f096240',
+            exerciseId: EXERCISE_IDS.shadowBoxing,
+            name: 'Shadow Boxing',
+            category: 'combat',
+            metrics: { rounds: 3, roundDuration: 180, restDuration: 60 }
+          },
+          {
+            id: 'be1069e2-381c-43df-8121-66385f096241',
+            exerciseId: EXERCISE_IDS.heavyBagWork,
+            name: 'Heavy Bag Work',
+            category: 'combat',
+            metrics: { rounds: 4, roundDuration: 180, restDuration: 60 }
+          },
+          {
+            id: 'be1069e2-381c-43df-8121-66385f096242',
+            exerciseId: EXERCISE_IDS.burpees,
+            name: 'Burpees',
+            category: 'cardio',
+            metrics: { sets: 3, reps: 15, restDuration: 45 }
+          }
+        ]
+      }
+    ];
+    await Workout.insertMany(workouts);
+
+    // Tréninkové jednotky (TrainingSessions)
+    const session = new TrainingSession({
+      _id: SESSION_IDS.fitnessSession,
+      userId: ATHLETE_ID,
+      microcycleId: CYCLES.fitness.micro,
+      workoutId: WORKOUT_IDS.fitnessUpper,
+      name: 'Těžký horní trénink (z šablony Upper Body)',
+      date: new Date('2026-05-19'),
+      duration: 72,
+      status: 'completed',
+      notes: 'Skvělý trénink, Bench Press šel nečekaně dobře. Navýšil jsem váhu na poslední 2 série.',
+      timeBlocks: [
+        {
+          id: 'tb1069e2-381c-43df-8121-66385f09623e',
+          name: 'Zahřátí & Mobilita',
+          duration: 12,
+          exercises: [
+            {
+              _id: 'se1069e2-381c-43df-8121-66385f09623e',
+              exerciseId: EXERCISE_IDS.worldsGreatestStretch,
+              name: "World's Greatest Stretch",
+              category: 'mobility',
+              metrics: { sets: 2, reps: 6, restDuration: 30 },
+              completedSets: [
+                { reps: 6, weight: 0, completed: true },
+                { reps: 6, weight: 0, completed: true }
+              ]
+            }
+          ]
+        },
+        {
+          id: 'tb1069e2-381c-43df-8121-66385f09623f',
+          name: 'Hlavní Síla',
+          duration: 45,
+          exercises: [
+            {
+              _id: 'se1069e2-381c-43df-8121-66385f09623f',
+              exerciseId: EXERCISE_IDS.benchPress,
+              name: 'Bench Press',
+              category: 'strength',
+              metrics: { sets: 4, reps: 8, weight: 80, restDuration: 120 },
+              completedSets: [
+                { reps: 8, weight: 80, completed: true },
+                { reps: 8, weight: 80, completed: true },
+                { reps: 8, weight: 82.5, completed: true },
+                { reps: 7, weight: 82.5, completed: true }
+              ]
+            }
+          ]
+        },
+        {
+          id: 'tb1069e2-381c-43df-8121-66385f096240',
+          name: 'Doplňky',
+          duration: 15,
+          exercises: [
+            {
+              _id: 'se1069e2-381c-43df-8121-66385f096240',
+              exerciseId: EXERCISE_IDS.bicepCurl,
+              name: 'Dumbbell Bicep Curl',
+              category: 'strength',
+              metrics: { sets: 3, reps: 12, weight: 12, restDuration: 60 },
+              completedSets: [
+                { reps: 12, weight: 12, completed: true },
+                { reps: 12, weight: 12, completed: true },
+                { reps: 10, weight: 12, completed: true }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    await session.save();
+
+    return { success: true, message: 'Remote MongoDB successfully seeded with fitness and combat data.' };
+  });
+
+/**
+ * 2. WIPE DATABASE
+ */
+export const wipeDatabaseFn = createServerFn({ method: 'POST' })
+  .handler(async () => {
+    await connectToDatabase();
+    await Promise.all([
+      User.deleteMany({}),
+      Exercise.deleteMany({}),
+      Cycle.deleteMany({}),
+      Mesocycle.deleteMany({}),
+      Microcycle.deleteMany({}),
+      Workout.deleteMany({}),
+      TrainingSession.deleteMany({})
+    ]);
+    return { success: true, message: 'All remote MongoDB collections wiped clean.' };
+  });
+
+/**
+ * 3. GET SYSTEM DATA SNAPSHOT
+ */
+export const fetchDataFn = createServerFn({ method: 'GET' })
+  .inputValidator((d: unknown): string => {
+    if (typeof d !== 'string') throw new Error('Invalid userId parameter');
+    return d;
+  })
+  .handler(async ({ data: userId }: { data: string }) => {
+    await connectToDatabase();
+    const [users, exercises, workouts, cycles, mesocycles, microcycles, sessions] = await Promise.all([
+      User.find({}).lean(),
+      Exercise.find({}).sort({ name: 1 }).lean(),
+      Workout.find({ userId }).lean(),
+      Cycle.find({ userId }).sort({ startDate: 1 }).lean(),
+      Mesocycle.find({}).lean(), // All mesocycles for frontend traversal
+      Microcycle.find({}).lean(), // All microcycles for frontend traversal
+      TrainingSession.find({ userId }).sort({ date: 1 }).lean()
+    ]);
+
+    // Map _id to string to avoid serialization issues
+    const format = (list: any[]) => list.map(item => ({ ...item, id: item._id, _id: undefined }));
+    const formatWithUnderscore = (list: any[]) => list.map(item => ({ ...item, id: item._id }));
+
+    return {
+      users: format(users),
+      exercises: format(exercises),
+      workouts: formatWithUnderscore(workouts),
+      cycles: formatWithUnderscore(cycles),
+      mesocycles: formatWithUnderscore(mesocycles),
+      microcycles: formatWithUnderscore(microcycles),
+      trainingSessions: formatWithUnderscore(sessions)
+    };
+  });
+
+/**
+ * 4. CRUD SAVES & DELETES
+ */
+export const saveUserFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    return UserRepository.save(data);
+  });
+
+export const saveExerciseFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    return ExerciseRepository.save(data);
+  });
+
+export const saveWorkoutFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    return WorkoutRepository.save(data);
+  });
+
+export const saveCycleFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    return CycleRepository.save(data);
+  });
+
+export const saveMesocycleFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    await connectToDatabase();
+    const existing = await Mesocycle.findById(data._id);
+    if (existing) {
+      return Mesocycle.findByIdAndUpdate(data._id, data, { returnDocument: 'after', runValidators: true });
+    } else {
+      return new Mesocycle(data).save();
+    }
+  });
+
+export const saveMicrocycleFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    await connectToDatabase();
+    const existing = await Microcycle.findById(data._id);
+    if (existing) {
+      return Microcycle.findByIdAndUpdate(data._id, data, { returnDocument: 'after', runValidators: true });
+    } else {
+      return new Microcycle(data).save();
+    }
+  });
+
+export const saveTrainingSessionFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    return TrainingSessionRepository.save(data);
+  });
+
+export const deleteWorkoutFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    return WorkoutRepository.delete(data.id);
+  });
+
+export const deleteCycleFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    await connectToDatabase();
+    // Drop sub-entities first for integrity
+    const mesos = await Mesocycle.find({ cycleId: data.id });
+    for (const meso of mesos) {
+      await Microcycle.deleteMany({ mesocycleId: meso._id });
+    }
+    await Mesocycle.deleteMany({ cycleId: data.id });
+    return CycleRepository.delete(data.id);
+  });
+
+export const deleteTrainingSessionFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: any) => d)
+  .handler(async ({ data }: { data: any }) => {
+    return TrainingSessionRepository.delete(data.id);
+  });

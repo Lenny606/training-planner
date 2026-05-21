@@ -15,7 +15,10 @@ services:
     volumes:
       - mongodb_data:/data/db
     networks:
-      - training-network
+      training-network:
+        aliases:
+          - mongo
+          - mongodb
 
   # 2. Databázové webové rozhraní (Mongo Express)
   mongo-express:
