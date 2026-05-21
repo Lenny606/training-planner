@@ -94,3 +94,11 @@ graph TD
     Umožňují nám psát prémiový kód s glassmorfismem a plynulými přechody drop zón, přičemž styly zůstávají zapouzdřené a čisté bez záplavy utilitárních tříd.
 *   **Absence Autentizace (Single-User MVP)**:
     Pro potřeby vývoje, testování a rychlého nasazení MVP zcela **vypouštíme přihlašování a registraci uživatelů (No Auth)**. Aplikace funguje jako lokální/globální plánovač pro jednoho uživatele. To radikálně zjednodušuje databázová schémata i API vrstvu. V případě budoucího rozšíření na multi-user platformu stačí pouze přidat vazební sloupec `userId` do modelů `Exercise` a `TrainingPlan`.
+
+---
+
+## 5. Bezpečnost (Security)
+
+V rámci zajištění stability a bezpečnosti dodavatelského řetězce (supply chain security) je definováno následující pravidlo pro správu závislostí:
+
+*   **Pravidlo 3 dnů pro NPM balíčky**: Do projektu smí být instalovány pouze ty verze NPM balíčků, které jsou publikovány v registru **minimálně 3 dny**. Toto opatření slouží jako prevence proti „malicious“ verzím balíčků, které jsou často staženy z registru krátce po odhalení. Před instalací nebo aktualizací jakékoli knihovny je nutné ověřit datum vydání dané verze.
