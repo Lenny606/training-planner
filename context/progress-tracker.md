@@ -50,9 +50,10 @@ Tento dokument slouží jako **paměť projektu** a hlavní přehled stavu imple
   - Vytvořeny zabezpečené environmentální šablony (`.env.example`, `.env.development`, `.env.production`) a nastaven robustní `.gitignore`.
   - Nakonfigurován unit a integrační testovací framework **Vitest** (`vitest.config.ts`, `tests/setup.ts` s automatickým mockováním IndexedDB přes `fake-indexeddb` a `navigator.onLine`).
   - Nakonfigurován E2E testovací framework **Playwright** (`playwright.config.ts`) s přednastavenými profily pro Chromium a emulaci Pixel 5 pro Touch Sensor.
-- [x] **Nastavení Lokálního Docker Vývojového Prostředí (Fáze 2 - Docker)**:
+- [x] **Nastavení Lokálního Docker Vývojového Prostředí & Optimalizace (Fáze 2 - Docker)**:
   - Vytvořen optimalizovaný multi-stage `Dockerfile` s build a dev/prod targety.
   - Vytvořena orchestrace `docker-compose.yml` pro Mongo 7.0 (`tp-mongodb`), Mongo Express (`tp-mongo-express`) a webovou aplikaci (`tp-web-app`).
+  - **NOVÉ (Optimalizace)**: Přidáno pokročilé BuildKit cachování NPM závislostí (`--mount=type=cache`), inteligentní entrypoint `docker-entrypoint.sh` pro automatický hot-reload / instalaci `node_modules` při změně `package.json`, vytvořen `.dockerignore` pro ochranu env klíčů a minimalizaci build kontextu, a zavedena spolehlivá orchestrace pořadí spouštění (MongoDB `healthcheck` + `condition: service_healthy` pro ostatní kontejnery).
   - Aktualizovány `.env.development` a `.env.example` o autorizované MongoDB proměnné a tajné klíče.
   - Spuštěna testovací suita pro ujištění, že konfigurace Dockeru nenarušila integritu projektu (100% pass).
 - [x] **Mongoose, Zod a Repository Layer (Fáze 2 - Backend DB)**:

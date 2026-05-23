@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. Databáze MongoDB
   mongodb:
@@ -14,6 +12,12 @@ services:
       MONGO_INITDB_DATABASE: training-planner
     volumes:
       - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       training-network:
         aliases:
@@ -34,7 +38,8 @@ services:
       ME_CONFIG_BASICAUTH_USERNAME: ${ME_USER:-admin}
       ME_CONFIG_BASICAUTH_PASSWORD: ${ME_PASSWORD:-admin}
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - training-network
 
@@ -55,7 +60,8 @@ services:
       - .:/app
       - /app/node_modules # Zabrání přepsání nodemodules z hostitele
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - training-network
 
