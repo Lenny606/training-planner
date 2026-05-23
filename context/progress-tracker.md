@@ -6,9 +6,9 @@ Tento dokument slouží jako **paměť projektu** a hlavní přehled stavu imple
 
 ## 📊 Celkový Stav Projektu
 
-* **Aktuální Fáze**: `Fáze 2: Databázová vrstva a lokální úložiště`
-* **Celkový progres**: █████████░░░░░░░░░░░ **45%**
-* **Poslední aktualizace**: 19. května 2026
+* **Aktuální Fáze**: `Fáze 4: Frontend Core & Drag and Drop`
+* **Celkový progres**: ██████████████░░░░░ **75%**
+* **Poslední aktualizace**: 23. května 2026
 
 ---
 
@@ -17,9 +17,9 @@ Tento dokument slouží jako **paměť projektu** a hlavní přehled stavu imple
 | Fáze | Modul / Popis | Stav | Priorita |
 | :--- | :--- | :--- | :--- |
 | **Fáze 1** | **Inicializace projektu a kostra aplikace** (TanStack Start, Tailwind v4, AI SDK, Testy, Env) | 🟢 Dokončeno | 🔴 Vysoká |
-| **Fáze 2** | **Databázová vrstva a lokální úložiště** (Dexie.js, Mongoose UUID integrace, Mongoose schemas) | ⏳ V progresu | 🔴 Vysoká |
-| **Fáze 3** | **Zustand Offline Store a Sync Engine** (Outbox fronta, synchronizační cyklus, rekonciliace dat) | 💤 Čeká | 🔴 Vysoká |
-| **Fáze 4** | **Frontend Core & Drag and Drop** (DnD-kit s touch podporou, layouty, správa časových bloků) | 💤 Čeká | 🟡 Střední |
+| **Fáze 2** | **Databázová vrstva a lokální úložiště** (Dexie.js, Mongoose UUID integrace, Mongoose schemas) | 🟢 Dokončeno | 🔴 Vysoká |
+| **Fáze 3** | **Zustand Offline Store a Sync Engine** (Outbox fronta, synchronizační cyklus, rekonciliace dat) | 🟢 Dokončeno | 🔴 Vysoká |
+| **Fáze 4** | **Frontend Core & Drag and Drop** (DnD-kit s touch podporou, layouty, správa časových bloků) | ⏳ V progresu | 🟡 Střední |
 | **Fáze 5** | **AI Asistent (Chytré generování a úpravy)** (Vercel AI SDK, Gemini API integrace, streamování) | 💤 Čeká | 🟡 Střední |
 | **Fáze 6** | **PWA a Testování** (Serwist Service Worker, offline fallback, Vitest & Playwright spuštění) | 💤 Čeká | 🟢 Nízká |
 
@@ -53,39 +53,40 @@ Tento dokument slouží jako **paměť projektu** a hlavní přehled stavu imple
 - [x] **Nastavení Lokálního Docker Vývojového Prostředí & Optimalizace (Fáze 2 - Docker)**:
   - Vytvořen optimalizovaný multi-stage `Dockerfile` s build a dev/prod targety.
   - Vytvořena orchestrace `docker-compose.yml` pro Mongo 7.0 (`tp-mongodb`), Mongo Express (`tp-mongo-express`) a webovou aplikaci (`tp-web-app`).
-  - **NOVÉ (Optimalizace)**: Přidáno pokročilé BuildKit cachování NPM závislostí (`--mount=type=cache`), inteligentní entrypoint `docker-entrypoint.sh` pro automatický hot-reload / instalaci `node_modules` při změně `package.json`, vytvořen `.dockerignore` pro ochranu env klíčů a minimalizaci build kontextu, a zavedena spolehlivá orchestrace pořadí spouštění (MongoDB `healthcheck` + `condition: service_healthy` pro ostatní kontejnery).
-  - Aktualizovány `.env.development` a `.env.example` o autorizované MongoDB proměnné a tajné klíče.
-  - Spuštěna testovací suita pro ujištění, že konfigurace Dockeru nenarušila integritu projektu (100% pass).
 - [x] **Mongoose, Zod a Repository Layer (Fáze 2 - Backend DB)**:
   - Implementováno robustní Singleton připojení `connection.ts` chráněné proti znovupřipojování v dev prostředí a s dynamickou detekcí URI.
-  - Vytvořena kompletní Mongoose schémata a Zod validátory se String UUID primárními klíči pro všechny modely (`User`, `Cycle`, `Mesocycle`, `Microcycle`, `Exercise`, `Workout`, `TrainingSession`) se schema-level validacemi.
-  - Vytvořena Repository vrstva pro všechny modely (`UserRepository`, `CycleRepository`, `WorkoutRepository`, `TrainingSessionRepository`) s podporou pro klientsky generovaná UUID a inteligentní `save()` kontrolou.
+  - Vytvořena kompletní Mongoose schémata a Zod validátory se String UUID primárními klíči pro všechny modely se schema-level validacemi.
+  - Vytvořena Repository vrstva pro všechny modely s podporou pro klientsky generovaná UUID a inteligentní `save()` kontrolou.
   - Napsány a úspěšně spuštěny robustní integrační testy (`database.test.ts`) s 100% úspěšností (7/7 testů prochází).
 - [x] **Seeding a Testovací Data (Fáze 2 - Data Seeding)**:
-  - Vytvořena kompletní a realistická specifikace testovacích dat v souboru `04-data.md` pro 2 uživatele (Jirka - Fitness, Petr - Box), katalog 15 cviků, plány tréninků a cyklů.
-  - Implementován robustní, samočinný seeder skript `seed.ts` s plnou typovou a Mongoose kontrolou, klientsky generovanými UUID a automatickým promazáním stávajících dat.
-  - Přidán skript `"db:seed"` do `package.json` a úspěšně ověřena stoprocentní funkčnost seederu v WSL.
-- [x] **Specifikace Základního Frontend UI a Testovací Homepage**:
-  - Rozepsán soubor `05-base-frontend-ui.md` popisující jednoduchý testovací dashboard.
-  - Specifikovány ovládací prvky databáze (Seed, Wipe, Dexie reset, Sync trigger), rychlé přepínání uživatelů (Trenér vs. Atlet) a diagnostický offline sync panel.
+  - Vytvořena kompletní a realistická specifikace testovacích dat v souboru `04-data.md`.
+  - Implementován robustní, samočinný seeder skript `seed.ts` s plnou typovou a Mongoose kontrolou.
+- [x] **IndexedDB (Dexie.js) Lokální Vrstva (Fáze 2 - Lokální DB)**:
+  - Vytvořena lokální databáze `localDb.ts` na frontendu s Dexie.js.
+  - Definována schémata pro offline entity a frontu synchronizace `syncQueue` (Outbox).
+- [x] **Zustand Offline Store a Sync Engine (Fáze 3)**:
+  - Implementováno propojení Zustand storu (`useStore.ts`) s Dexie.js (synchronní zápis) a zařazení do Outbox fronty.
+  - Vytvořen Sync Engine cyklus (`syncEngine.ts`) pro debounced odesílání změn na server.
+- [x] **Prémiová Knihovna Znovupoužitelných Komponent (Fáze 4)**:
+  - Vytvořena modulární, premium UI komponentní knihovna s pěti designovými variantami (`Button.tsx`, `Input.tsx` s neonovým fokusem a asynchronní vyhledávací `SelectButton.tsx` se skleněným dropdownem).
+  - Modernizovány CRUD formuláře a impersonační panel v celém dashboardu.
+  - Vytvořen **Katalog Cviků v Databázi** (Exercise Catalog Explorer) využívající asynchronní načítání cviků z IndexedDB s fluidními animacemi.
+  - Implementována adaptivní **Exercise Detail Karta** zobrazující specifické tréninkové metriky podle kategorie cviku.
 
 ---
 
-## 🏃‍♂️ Aktuální Úkol: Fáze 2 — Databázová vrstva a lokální úložiště
-Po úspěšném dokončení kostry přecházíme na zprovoznění datové vrstvy.
+## 🏃‍♂️ Aktuální Úkol: Fáze 4 — Frontend Core & Drag and Drop
+Zaměříme se na vytvoření robustního DnD rozhraní.
 
 ### Podkroky aktuální fáze:
-1. `[ ]` Vytvoření lokální IndexedDB databáze (`localDb.ts`) pomocí **Dexie.js** na frontendu.
-2. `[ ]` Definování Dexie schémat pro plány (`plans`) a synchronizační frontu (`syncQueue` aka Outbox).
-3. `[x]` Příprava Mongoose schémat na backendu se String UUID primárními klíči (`_id`) a Zod schémat pro validaci.
-4. `[x]` Implementace Repository vrstvy (UserRepository, CycleRepository, WorkoutRepository, TrainingSessionRepository).
-5. `[x]` Vytvoření a úspěšné spuštění integračních testů (`database.test.ts`) pro backend DB.
+1. `[ ]` Integrace `@dnd-kit` pro řazení cviků v trénincích s podporou pro dotyková mobilní gesta (Touch Constraints: hold 250ms).
+2. `[ ]` Vytvoření zobrazení tréninkového kalendáře s týdenním pohledem (Microcycle Planner).
+3. `[ ]` Zprovoznění interaktivních grafů pro sledování progresu a zatížení.
 
 ---
 
 ## 🔮 Bezprostředně Následující Kroky (Next Steps)
-Jakmile dokončíme Fázi 2, budeme pokračovat na:
+Jakmile dokončíme Fázi 4, budeme pokračovat na:
 
-1. **Fáze 3: Zustand Offline Store a Sync Engine**:
-   * Propojení Zustand storu s Dexie.js (synchronní zápis) a zařazení do Outbox fronty.
-   * Vytvoření Sync Engine cyklu pro debounced odesílání změn na server.
+1. **Fáze 5: AI Asistent (Chytré generování a úpravy)**:
+   * Propojení Vercel AI SDK a Gemini API s kontextem tréninkového plánu pro tvorbu tréninkových jednotek na míru.

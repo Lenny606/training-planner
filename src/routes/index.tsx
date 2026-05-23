@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useStore } from '../store/useStore';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { SelectButton } from '../components/SelectButton';
 import { 
   Wifi, 
   WifiOff, 
@@ -40,6 +43,24 @@ function Dashboard() {
   const [sessionStatus, setSessionStatus] = useState<'planned' | 'completed' | 'skipped'>('planned');
   
   const [customUserId, setCustomUserId] = useState('');
+  
+  const [selectedExerciseId, setSelectedExerciseId] = useState('');
+  const selectedExercise = store.exercises.find((ex) => ex.id === selectedExerciseId);
+
+  const loadExercisesFromStore = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return store.exercises.map((ex) => ({
+      value: ex.id,
+      label: ex.name,
+      subLabel: ex.description || 'Bez popisu',
+      badge: ex.category.toUpperCase(),
+      badgeColorClass: ex.category === 'strength' ? 'bg-[#ff5e62]/15 text-[#ff5e62] border-[#ff5e62]/30 text-[9px] font-bold' :
+                       ex.category === 'combat' ? 'bg-[#ff9f43]/15 text-[#ff9f43] border-[#ff9f43]/30 text-[9px] font-bold' :
+                       ex.category === 'cardio' ? 'bg-[#1dd1a1]/15 text-[#1dd1a1] border-[#1dd1a1]/30 text-[9px] font-bold' :
+                       ex.category === 'mobility' ? 'bg-[#a55eea]/15 text-[#a55eea] border-[#a55eea]/30 text-[9px] font-bold' :
+                       'bg-[#45aaf2]/15 text-[#45aaf2] border-[#45aaf2]/30 text-[9px] font-bold'
+    }));
+  };
   
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -168,26 +189,25 @@ function Dashboard() {
             </div>
 
             {/* TOGGLE SIMULATED OFFLINE */}
-            <button
+            <Button
+              variant={store.isSimulatedOffline ? 'accent' : 'secondary'}
               onClick={() => store.setSimulatedOffline(!store.isSimulatedOffline)}
-              className={`px-5 py-2.5 rounded-xl font-semibold text-xs tracking-wider transition-all duration-300 cursor-pointer shadow-lg active:scale-95 flex items-center gap-2 ${
-                store.isSimulatedOffline 
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-orange-500/10 border border-orange-500/30' 
-                  : 'bg-[#1b202c] hover:bg-[#1b202c]/80 text-[#f3f6f9] border border-white/5 hover:border-white/10'
-              }`}
+              className="tracking-wider"
             >
               {store.isSimulatedOffline ? 'Zapnout Připojení' : 'Simulovat Offline'}
-            </button>
+            </Button>
 
             {/* SYNC NOW BUTTON */}
-            <button
+            <Button
+              variant="primary"
               onClick={() => store.triggerLocalSync()}
               disabled={store.isSyncing || store.isSimulatedOffline}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#00f2fe] to-[#4facfe] text-[#0a0c10] font-bold text-xs tracking-wider transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(0,242,254,0.4)] active:scale-95 flex items-center gap-2"
+              loading={store.isSyncing}
+              className="font-bold tracking-wider"
             >
-              <RefreshCw className={`w-4 h-4 ${store.isSyncing ? 'animate-spin' : ''}`} />
+              {!store.isSyncing && <RefreshCw className="w-4 h-4" />}
               {store.isSyncing ? 'Synchronizace...' : 'Synchronizovat'}
-            </button>
+            </Button>
           </div>
         </div>
       </header>
@@ -254,45 +274,40 @@ function Dashboard() {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
-              <button
+              <Button
+                type="button"
+                variant={store.activeUserId === standardCoach ? 'primary' : 'secondary'}
                 onClick={() => store.changeUser(standardCoach)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold tracking-wider transition-all duration-300 cursor-pointer ${
-                  store.activeUserId === standardCoach
-                    ? 'bg-gradient-to-r from-[#00f2fe]/20 to-[#4facfe]/20 text-[#00f2fe] border border-[#00f2fe]/40 shadow-[0_0_15px_rgba(0,242,254,0.1)]'
-                    : 'bg-[#1b202c]/50 text-[#8292a6] hover:text-[#f3f6f9] border border-white/5 hover:border-white/10'
-                }`}
+                className="flex-1 justify-center gap-2 tracking-wider"
               >
                 <UserCheck className="w-4 h-4" />
                 Trenér (Coach)
-              </button>
+              </Button>
 
-              <button
+              <Button
+                type="button"
+                variant={store.activeUserId === standardAthlete ? 'accent' : 'secondary'}
                 onClick={() => store.changeUser(standardAthlete)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold tracking-wider transition-all duration-300 cursor-pointer ${
-                  store.activeUserId === standardAthlete
-                    ? 'bg-gradient-to-r from-[#ff5e62]/20 to-[#ff9f43]/20 text-[#ff5e62] border border-[#ff5e62]/40 shadow-[0_0_15px_rgba(255,94,98,0.1)]'
-                    : 'bg-[#1b202c]/50 text-[#8292a6] hover:text-[#f3f6f9] border border-white/5 hover:border-white/10'
-                }`}
+                className="flex-1 justify-center gap-2 tracking-wider"
               >
                 <UserCheck className="w-4 h-4" />
                 Atlet (Athlete)
-              </button>
+              </Button>
             </div>
 
-            <form onSubmit={handleCustomUserSubmit} className="flex gap-2">
-              <input
-                type="text"
-                value={customUserId}
-                onChange={(e) => setCustomUserId(e.target.value)}
-                placeholder="Vložit vlastní User UUID..."
-                className="flex-1 bg-[#0a0c10] border border-white/5 focus:border-[#00f2fe]/50 text-xs px-4 py-3 rounded-xl text-[#f3f6f9] outline-none font-mono focus:shadow-[0_0_10px_rgba(0,242,254,0.1)] transition-all"
-              />
-              <button 
-                type="submit"
-                className="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-3 rounded-xl text-xs font-semibold hover:text-[#00f2fe] transition-colors cursor-pointer"
-              >
+            <form onSubmit={handleCustomUserSubmit} className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  value={customUserId}
+                  onChange={(e) => setCustomUserId(e.target.value)}
+                  placeholder="Vložit vlastní User UUID..."
+                  className="font-mono text-xs"
+                />
+              </div>
+              <Button type="submit" variant="outline">
                 Přepnout
-              </button>
+              </Button>
             </form>
             <div className="mt-3 text-[10px] text-[#8292a6] font-mono flex items-center justify-between">
               <span>Aktuální ID: {store.activeUserId}</span>
@@ -316,114 +331,121 @@ function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* CREATE WORKOUT FORM */}
               <form onSubmit={handleCreateWorkout} className="bg-[#12161f]/50 p-4 rounded-xl border border-white/5 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-bold text-[#00f2fe] tracking-wide uppercase font-outfit">Vytvořit Workout</span>
                   <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded">Zustand + Dexie</span>
                 </div>
-                <input
+                <Input
                   type="text"
                   required
                   placeholder="Název workoutu..."
                   value={workoutName}
                   onChange={(e) => setWorkoutName(e.target.value)}
-                  className="bg-[#0a0c10] border border-white/5 focus:border-[#00f2fe]/40 text-xs px-3 py-2 rounded-lg text-[#f3f6f9] outline-none"
                 />
                 <textarea
                   placeholder="Popis workoutu..."
                   value={workoutDesc}
                   onChange={(e) => setWorkoutDesc(e.target.value)}
-                  className="bg-[#0a0c10] border border-white/5 focus:border-[#00f2fe]/40 text-xs px-3 py-2 rounded-lg text-[#f3f6f9] outline-none h-14 resize-none"
+                  className="bg-[#0a0c10] border border-white/5 focus:border-[#00f2fe]/40 text-xs px-3 py-2 rounded-xl text-[#f3f6f9] outline-none h-14 resize-none transition-all focus:shadow-[0_0_10px_rgba(0,242,254,0.08)]"
                 />
-                <button
+                <Button
                   type="submit"
-                  className="bg-[#00f2fe]/10 hover:bg-[#00f2fe]/20 text-[#00f2fe] text-xs font-semibold py-2 rounded-lg border border-[#00f2fe]/20 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  variant="primary"
+                  size="sm"
+                  className="justify-center gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" /> Uložit do Outboxu
-                </button>
+                </Button>
               </form>
 
               {/* CREATE CYCLE FORM */}
               <form onSubmit={handleCreateCycle} className="bg-[#12161f]/50 p-4 rounded-xl border border-white/5 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-bold text-[#ff5e62] tracking-wide uppercase font-outfit">Vytvořit Tréninkový Cyklus</span>
                   <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded">Zustand + Dexie</span>
                 </div>
-                <input
+                <Input
                   type="text"
                   required
                   placeholder="Název cyklu (např. Jarní objem)..."
                   value={cycleName}
                   onChange={(e) => setCycleName(e.target.value)}
-                  className="bg-[#0a0c10] border border-white/5 focus:border-[#ff5e62]/40 text-xs px-3 py-2 rounded-lg text-[#f3f6f9] outline-none"
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-[#8292a6] uppercase tracking-wider">Start</label>
-                    <input
+                    <label className="text-[9px] text-[#8292a6] uppercase tracking-wider font-semibold font-outfit">Start</label>
+                    <Input
                       type="date"
                       required
                       value={cycleStart}
                       onChange={(e) => setCycleStart(e.target.value)}
-                      className="bg-[#0a0c10] border border-white/5 text-[10px] px-2 py-1.5 rounded-lg text-[#f3f6f9] outline-none"
+                      className="text-[10px]"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9px] text-[#8292a6] uppercase tracking-wider">Konec</label>
-                    <input
+                    <label className="text-[9px] text-[#8292a6] uppercase tracking-wider font-semibold font-outfit">Konec</label>
+                    <Input
                       type="date"
                       required
                       value={cycleEnd}
                       onChange={(e) => setCycleEnd(e.target.value)}
-                      className="bg-[#0a0c10] border border-white/5 text-[10px] px-2 py-1.5 rounded-lg text-[#f3f6f9] outline-none"
+                      className="text-[10px]"
                     />
                   </div>
                 </div>
-                <button
+                <Button
                   type="submit"
-                  className="bg-[#ff5e62]/10 hover:bg-[#ff5e62]/20 text-[#ff5e62] text-xs font-semibold py-2 rounded-lg border border-[#ff5e62]/20 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  variant="accent"
+                  size="sm"
+                  className="justify-center gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" /> Uložit do Outboxu
-                </button>
+                </Button>
               </form>
 
               {/* CREATE TRAINING SESSION FORM */}
               <form onSubmit={handleCreateSession} className="bg-[#12161f]/50 p-4 rounded-xl border border-white/5 flex flex-col gap-3 md:col-span-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-bold text-[#1dd1a1] tracking-wide uppercase font-outfit">Naplánovat Training Session</span>
                   <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded">Zustand + Dexie</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <input
+                  <Input
                     type="text"
                     required
                     placeholder="Název relace (např. Dřepy Těžce)..."
                     value={sessionName}
                     onChange={(e) => setSessionName(e.target.value)}
-                    className="bg-[#0a0c10] border border-white/5 focus:border-[#1dd1a1]/40 text-xs px-3 py-2 rounded-lg text-[#f3f6f9] outline-none"
                   />
-                  <input
+                  <Input
                     type="date"
                     required
                     value={sessionDate}
                     onChange={(e) => setSessionDate(e.target.value)}
-                    className="bg-[#0a0c10] border border-white/5 focus:border-[#1dd1a1]/40 text-xs px-3 py-2 rounded-lg text-[#f3f6f9] outline-none"
                   />
-                  <select
+                  <SelectButton
+                    placeholder="Status relace..."
                     value={sessionStatus}
-                    onChange={(e: any) => setSessionStatus(e.target.value)}
-                    className="bg-[#0a0c10] border border-white/5 focus:border-[#1dd1a1]/40 text-xs px-3 py-2 rounded-lg text-[#f3f6f9] outline-none"
-                  >
-                    <option value="planned">Planned (Naplánováno)</option>
-                    <option value="completed">Completed (Dokončeno)</option>
-                    <option value="skipped">Skipped (Vynecháno)</option>
-                  </select>
+                    onChange={(val) => setSessionStatus(val as any)}
+                    options={[
+                      { value: 'planned', label: 'Naplánováno (Planned)', badge: 'PLANNED', badgeColorClass: 'bg-[#45aaf2]/15 text-[#45aaf2] border-[#45aaf2]/30 text-[9px] font-bold' },
+                      { value: 'completed', label: 'Dokončeno (Completed)', badge: 'COMPLETED', badgeColorClass: 'bg-[#1dd1a1]/15 text-[#1dd1a1] border-[#1dd1a1]/30 text-[9px] font-bold' },
+                      { value: 'skipped', label: 'Vynecháno (Skipped)', badge: 'SKIPPED', badgeColorClass: 'bg-[#ff5e62]/15 text-[#ff5e62] border-[#ff5e62]/30 text-[9px] font-bold' },
+                    ]}
+                    searchable={false}
+                    variant="secondary"
+                    size="sm"
+                    containerClassName="w-full h-[38px]"
+                  />
                 </div>
-                <button
+                <Button
                   type="submit"
-                  className="bg-[#1dd1a1]/10 hover:bg-[#1dd1a1]/20 text-[#1dd1a1] text-xs font-semibold py-2 rounded-lg border border-[#1dd1a1]/20 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  variant="outline"
+                  size="sm"
+                  className="justify-center gap-1.5 text-[#1dd1a1] border-[#1dd1a1]/30 hover:bg-[#1dd1a1]/10"
                 >
                   <Plus className="w-3.5 h-3.5" /> Uložit do Outboxu
-                </button>
+                </Button>
               </form>
             </div>
           </div>
@@ -469,6 +491,104 @@ function Dashboard() {
                     </span>
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+
+          {/* EXERCISE CATALOG EXPLORER */}
+          <div className="glass-panel rounded-2xl p-6 relative overflow-hidden flex flex-col">
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-white/5"></div>
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <Flame className="w-5 h-5 text-[#ff5e62]" />
+                <h2 className="font-bold text-sm tracking-wider uppercase text-[#8292a6] font-outfit">Katalog Cviků v Databázi</h2>
+              </div>
+              <span className="text-[10px] text-[#ff5e62] bg-[#ff5e62]/10 border border-[#ff5e62]/20 px-2 py-0.5 rounded font-semibold font-outfit">
+                {store.exercises.length} CVIKŮ
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <SelectButton
+                key={`${store.activeUserId}-${store.exercises.length}`}
+                placeholder="Vyhledat nebo vybrat cvik..."
+                value={selectedExerciseId}
+                onChange={setSelectedExerciseId}
+                loadOptions={loadExercisesFromStore}
+                variant="primary"
+                searchable={true}
+              />
+
+              {/* EXERCISE DETAIL CARD */}
+              {selectedExercise ? (
+                <div className="bg-[#12161f]/75 border border-white/5 rounded-2xl p-5 relative overflow-hidden transition-all duration-300 hover:border-[#00f2fe]/20 shadow-lg">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-[#00f2fe] to-[#4facfe]" />
+                  
+                  <div className="flex justify-between items-start gap-4 mb-3">
+                    <div>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border tracking-wide uppercase ${
+                        selectedExercise.category === 'strength' ? 'bg-[#ff5e62]/15 text-[#ff5e62] border-[#ff5e62]/30' :
+                        selectedExercise.category === 'combat' ? 'bg-[#ff9f43]/15 text-[#ff9f43] border-[#ff9f43]/30' :
+                        selectedExercise.category === 'cardio' ? 'bg-[#1dd1a1]/15 text-[#1dd1a1] border-[#1dd1a1]/30' :
+                        selectedExercise.category === 'mobility' ? 'bg-[#a55eea]/15 text-[#a55eea] border-[#a55eea]/30' :
+                        'bg-[#45aaf2]/15 text-[#45aaf2] border-[#45aaf2]/30'
+                      }`}>
+                        {selectedExercise.category}
+                      </span>
+                      <h3 className="text-sm font-bold text-white mt-1.5 font-outfit tracking-wide">{selectedExercise.name}</h3>
+                    </div>
+                  </div>
+
+                  {selectedExercise.description && (
+                    <p className="text-xs text-[#8292a6] leading-relaxed mb-4 italic">
+                      "{selectedExercise.description}"
+                    </p>
+                  )}
+
+                  {selectedExercise.defaultMetrics && (
+                    <div className="bg-[#07090d]/80 border border-white/5 rounded-xl p-4 grid grid-cols-2 gap-3 text-xs">
+                      {selectedExercise.category === 'strength' || selectedExercise.category === 'mobility' ? (
+                        <>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-[#8292a6] uppercase font-semibold font-outfit">Série (Sets)</span>
+                            <span className="font-bold text-white font-mono">{selectedExercise.defaultMetrics.sets}x</span>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-[#8292a6] uppercase font-semibold font-outfit">Opakování (Reps)</span>
+                            <span className="font-bold text-white font-mono">{selectedExercise.defaultMetrics.reps}</span>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-[#8292a6] uppercase font-semibold font-outfit">Váha (Weight)</span>
+                            <span className="font-bold text-white font-mono">{selectedExercise.defaultMetrics.weight} kg</span>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-[#8292a6] uppercase font-semibold font-outfit">Odpočinek (Rest)</span>
+                            <span className="font-bold text-white font-mono">{selectedExercise.defaultMetrics.restDuration} s</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-[#8292a6] uppercase font-semibold font-outfit">Kola (Rounds)</span>
+                            <span className="font-bold text-white font-mono">{selectedExercise.defaultMetrics.rounds}x</span>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-[#8292a6] uppercase font-semibold font-outfit">Doba kola (Duration)</span>
+                            <span className="font-bold text-white font-mono">{selectedExercise.defaultMetrics.roundDuration} s</span>
+                          </div>
+                          <div className="flex flex-col gap-0.5 col-span-2">
+                            <span className="text-[9px] text-[#8292a6] uppercase font-semibold font-outfit">Odpočinek (Rest)</span>
+                            <span className="font-bold text-white font-mono">{selectedExercise.defaultMetrics.restDuration} s</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center text-xs text-[#8292a6]/40 py-8 border border-dashed border-white/5 rounded-2xl bg-[#12161f]/10">
+                  Vyberte cvik z nabídky výše pro zobrazení detailů a výchozích metrik.
+                </div>
               )}
             </div>
           </div>
